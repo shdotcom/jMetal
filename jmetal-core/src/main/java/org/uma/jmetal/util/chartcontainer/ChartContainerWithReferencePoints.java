@@ -221,4 +221,36 @@ public class ChartContainerWithReferencePoints {
   public XYChart getChart(String chartName) {
     return this.charts.get(chartName);
   }
+  
+  public void addIndicatorChart(String indicator) {
+    XYChart indicatorChart = new XYChartBuilder().xAxisTitle("n").yAxisTitle(indicator).build();
+    indicatorChart.getStyler().setDefaultSeriesRenderStyle(XYSeriesRenderStyle.Scatter).setMarkerSize(5);
+
+    List<Integer> indicatorIterations = new ArrayList<Integer>();
+    indicatorIterations.add(0);
+    List<Double> indicatorValues = new ArrayList<Double>();
+    indicatorValues.add(0.0);
+
+    XYSeries indicatorSeries = indicatorChart.addSeries(this.name, indicatorIterations, indicatorValues);
+    indicatorSeries.setMarkerColor(Color.blue);
+
+    this.iterations.put(indicator, indicatorIterations);
+    this.indicatorValues.put(indicator, indicatorValues);
+    this.charts.put(indicator, indicatorChart);
+  }
+
+  public void removeIndicator(String indicator) {
+    this.iterations.remove(indicator);
+    this.indicatorValues.remove(indicator);
+    this.charts.remove(indicator);
+  }
+
+  public void updateIndicatorChart(String indicator, Double value) {
+    this.indicatorValues.get(indicator).add(value);
+    this.iterations.get(indicator).add(this.indicatorValues.get(indicator).size());
+
+    this.charts.get(indicator).updateXYSeries(this.name, this.iterations.get(indicator),
+            this.indicatorValues.get(indicator), null);
+  }
+  
 }
