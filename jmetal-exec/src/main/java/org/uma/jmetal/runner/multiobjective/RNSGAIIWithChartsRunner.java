@@ -122,14 +122,24 @@ public class RNSGAIIWithChartsRunner extends AbstractAlgorithmRunner {
     BasicMeasure<List<DoubleSolution>> solutionListMeasure = (BasicMeasure<List<DoubleSolution>>) measureManager
             .<List<DoubleSolution>>getPushMeasure("currentPopulation");
     CountingMeasure iterationMeasure = (CountingMeasure) measureManager.<Long>getPushMeasure("currentEvaluation");
+    BasicMeasure<Double> hypervolumeMeasure = (BasicMeasure<Double>) measureManager
+                .<Double>getPushMeasure("hypervolume");
+    BasicMeasure<Double> IGDMeasure = (BasicMeasure<Double>) measureManager
+                .<Double>getPushMeasure("IGD");
+    
+    
 
     ChartContainerWithReferencePoints chart = new ChartContainerWithReferencePoints(algorithm.getName(), 80);
     chart.setFrontChart(0, 1, referenceParetoFront);
     chart.setReferencePoint(convertReferencePointListToListOfLists(referencePoint, problem.getNumberOfObjectives()));
+    chart.addIndicatorChart("Hypervolume");
+    chart.addIndicatorChart("IGD");
     chart.initChart();
 
     solutionListMeasure.register(new ChartListener(chart));
     iterationMeasure.register(new IterationListener(chart));
+    hypervolumeMeasure.register(new IndicatorListener("Hypervolume", chart));
+    IGDMeasure.register(new IndicatorListener("IGD", chart)); 
     /* End of measure management */
 
     AlgorithmRunner algorithmRunner = new AlgorithmRunner.Executor(algorithm)
@@ -211,4 +221,24 @@ public class RNSGAIIWithChartsRunner extends AbstractAlgorithmRunner {
       }
     }
   }
+  
+  private static class IndicatorListener implements MeasureListener<Double> {
+        ChartContainerWithReferencePoints chart;
+        String indicator;
+
+        public IndicatorListener(String indicator, ChartContainerWithReferencePoints chart) {
+            this.chart = chart;
+            this.indicator = indicator;
+        }
+
+        @Override
+        synchronized public void measureGenerated(Double value) {
+            if (this.chart != null) {
+                this.chart.updateIndicatorChart(this.indicator, value);
+                this.chart.refreshCharts(0);
+            }
+        }
+    }
+  
+  
 }
