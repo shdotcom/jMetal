@@ -33,43 +33,63 @@ public class RNSGAII<S extends Solution<?>> extends NSGAII<S> implements
 
   protected SimpleMeasureManager measureManager ;
   protected BasicMeasure<List<S>> solutionListMeasure ;
-  protected CountingMeasure evaluations ;
+  protected CountingMeasure iterations ;
   protected DurationMeasure durationMeasure ;
+ 
+  protected BasicMeasure<Double> hypervolumeValue ;
+  protected BasicMeasure<Double> epsilonValue;
+  protected BasicMeasure<Double> IGDValue;
+    
+  protected Front referenceFront ;
 
   /**
    * Constructor
    */
-  public RNSGAII(Problem<S> problem, int maxEvaluations, int populationSize,
+  public RNSGAII(Problem<S> problem, int maxIterations, int populationSize,
                  int matingPoolSize, int offspringPopulationSize,
                  CrossoverOperator<S> crossoverOperator, MutationOperator<S> mutationOperator,
                  SelectionOperator<List<S>, S> selectionOperator, SolutionListEvaluator<S> evaluator,
                  List<Double> interestPoint, double epsilon) {
-    super(problem,maxEvaluations, populationSize,matingPoolSize, offspringPopulationSize, crossoverOperator,
+    super(problem,maxIterations, populationSize,matingPoolSize, offspringPopulationSize, crossoverOperator,
             mutationOperator,selectionOperator, new DominanceComparator<S>(), evaluator);
     this.interestPoint = interestPoint;
     this.epsilon = epsilon;
 
     measureManager = new SimpleMeasureManager() ;
     measureManager.setPushMeasure("currentPopulation", solutionListMeasure);
-    measureManager.setPushMeasure("currentEvaluation", evaluations);
+    measureManager.setPushMeasure("currentEvaluation", iterations);
+      
+    measureManager.setPushMeasure("hypervolume", hypervolumeValue);
+    measureManager.setPushMeasure("epsilon", epsilonValue);
+    measureManager.setPushMeasure("IGD", IGDValue);
+
+    referenceFront = new ArrayFront() ;
 
     initMeasures();
   }
+    
   @Override
   public void updatePointOfInterest(List<Double> newReferencePoints){
     this.interestPoint = newReferencePoints;
   }
+    
   @Override protected void initProgress() {
-    evaluations.reset(getMaxPopulationSize()) ;
+    iterations.reset(getMaxPopulationSize()) ;
   }
 
   @Override protected void updateProgress() {
-    evaluations.increment(getMaxPopulationSize());
+    iterations.increment(getMaxPopulationSize());
     solutionListMeasure.push(getPopulation());
+    epsilonValue.push(new Epsilon<S>(referenceFront).evaluate(getResult()));
+    if (referenceFront.getNumberOfPoints() > 0) {
+        hypervolumeValue.push(new PISAHypervolume<S>(referenceFront).evaluate(getResult()));
+        IGDValue.push(new InvertedGenerationalDistance<S>(referenceFront).evaluate(getResult()));
+    }  
+      
   }
 
   @Override protected boolean isStoppingConditionReached() {
-    return evaluations.get() >= maxEvaluations;
+    return iterations.get() >= maxIterations;
   }
 
   @Override
@@ -83,15 +103,24 @@ public class RNSGAII<S extends Solution<?>> extends NSGAII<S> implements
   /* Measures code */
   private void initMeasures() {
     durationMeasure = new DurationMeasure() ;
-    evaluations = new CountingMeasure(0) ;
+    iterations = new CountingMeasure(0) ;
     solutionListMeasure = new BasicMeasure<>() ;
+    hypervolumeValue = new BasicMeasure<>();
+    epsilonValue = new BasicMeasure<>();
+    IGDValue = new BasicMeasure<>();
 
     measureManager = new SimpleMeasureManager() ;
     measureManager.setPullMeasure("currentExecutionTime", durationMeasure);
-    measureManager.setPullMeasure("currentEvaluation", evaluations);
+    measureManager.setPullMeasure("currentEvaluation", iterations);
+    measureManager.setPullMeasure("hypervolume", hypervolumeValue);
+    measureManager.setPullMeasure("epsilon", epsilonValue);
+    measureManager.setPullMeasure("IGD", IGDValue);
 
     measureManager.setPushMeasure("currentPopulation", solutionListMeasure);
-    measureManager.setPushMeasure("currentEvaluation", evaluations);
+    measureManager.setPushMeasure("currentEvaluation", iterations);
+    measureManager.setPushMeasure("hypervolume", hypervolumeValue);
+    measureManager.setPushMeasure("epsilon", epsilonValue);
+    measureManager.setPushMeasure("IGD", IGDValue);
   }
 
   @Override
